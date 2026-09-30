@@ -1,0 +1,36 @@
+# Environment Variables
+.env
+.env.local
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & Linting
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE Configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Downloaded ML Model Weights Cache
+models/cache/
+*.bin
+*.pt
+*.safetensors
+
+# OS Artifacts
+.DS_Store
+Thumbs.db

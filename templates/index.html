@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduGenie – AI-Powered Learning Assistant</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- App Header & Navigation -->
+    <header class="app-header">
+        <div class="container header-container">
+            <a href="#" class="brand-logo" onclick="switchTab('hero')">
+                <div class="logo-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div class="logo-text">
+                    <span class="logo-name">EduGenie</span>
+                    <span class="logo-badge">AI Assistant</span>
+                </div>
+            </a>
+
+            <nav class="main-nav" id="mainNav">
+                <button class="nav-link active" data-tab="hero" onclick="switchTab('hero')">
+                    <i class="fa-solid fa-house"></i> <span>Home</span>
+                </button>
+                <button class="nav-link" data-tab="ask" onclick="switchTab('ask')">
+                    <i class="fa-solid fa-comment-dots"></i> <span>Ask AI</span>
+                </button>
+                <button class="nav-link" data-tab="explain" onclick="switchTab('explain')">
+                    <i class="fa-solid fa-lightbulb"></i> <span>Explain</span>
+                </button>
+                <button class="nav-link" data-tab="summarize" onclick="switchTab('summarize')">
+                    <i class="fa-solid fa-file-lines"></i> <span>Summarize</span>
+                </button>
+                <button class="nav-link" data-tab="quiz" onclick="switchTab('quiz')">
+                    <i class="fa-solid fa-circle-question"></i> <span>Quiz</span>
+                </button>
+                <button class="nav-link" data-tab="path" onclick="switchTab('path')">
+                    <i class="fa-solid fa-route"></i> <span>Learning Path</span>
+                </button>
+            </nav>
+
+            <div class="header-actions">
+                <a href="/docs" target="_blank" class="api-docs-btn" title="API Swagger Documentation">
+                    <i class="fa-solid fa-code"></i> <span>API Docs</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Global Alert / Status Bar (if API Key Missing) -->
+    {% if not gemini_configured %}
+    <div class="system-banner warning-banner">
+        <div class="container banner-content">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+                <strong>Gemini API Key Required:</strong> To enable live AI responses, add <code>GEMINI_API_KEY=your_key</code> in your <code>.env</code> file and restart the server.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Container -->
+    <main class="container main-content">
+
+        <!-- ============================================================ -->
+        <!-- 1. HERO SECTION -->
+        <!-- ============================================================ -->
+        <section id="tab-hero" class="tab-pane active">
+            <div class="hero-section">
+                <div class="hero-badge">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Powered by Google Gemini & LaMini
+                </div>
+                <h1 class="hero-title">
+                    Learn Smarter with <span class="gradient-text">EduGenie</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Your personal AI-powered learning companion. Ask difficult questions, break down complex concepts, summarize heavy textbooks, test your knowledge with quizzes, and generate customized roadmaps.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary btn-lg" onclick="switchTab('ask')">
+                        <i class="fa-solid fa-bolt"></i> Start Learning Now
+                    </button>
+                    <button class="btn btn-outline btn-lg" onclick="switchTab('quiz')">
+                        <i class="fa-solid fa-brain"></i> Take a Quiz
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature Cards Grid -->
+            <div class="features-grid">
+                <div class="feature-card" onclick="switchTab('ask')">
+                    <div class="feature-icon icon-indigo"><i class="fa-solid fa-comments"></i></div>
+                    <h3>Ask AI Tutor</h3>
+                    <p>Instant, step-by-step answers with intuitive examples to any educational query.</p>
+                    <span class="feature-action">Try Ask AI <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+
+                <div class="feature-card" onclick="switchTab('explain')">
+                    <div class="feature-icon icon-emerald"><i class="fa-solid fa-lightbulb"></i></div>
+                    <h3>Concept Explainer</h3>
+                    <p>Simplifies difficult subjects into Beginner, Intermediate, or Advanced levels.</p>
+                    <span class="feature-action">Explain Concept <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+
+                <div class="feature-card" onclick="switchTab('summarize')">
+                    <div class="feature-icon icon-violet"><i class="fa-solid fa-file-contract"></i></div>
+                    <h3>Study Summarizer</h3>
+                    <p>Condenses lengthy study passages, articles, and chapters into actionable notes.</p>
+                    <span class="feature-action">Summarize Text <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+
+                <div class="feature-card" onclick="switchTab('quiz')">
+                    <div class="feature-icon icon-amber"><i class="fa-solid fa-circle-check"></i></div>
+                    <h3>Smart Quiz Generator</h3>
+                    <p>Creates tailored multiple-choice tests with instant scoring and detailed answers.</p>
+                    <span class="feature-action">Generate Quiz <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+
+                <div class="feature-card" onclick="switchTab('path')">
+                    <div class="feature-icon icon-rose"><i class="fa-solid fa-timeline"></i></div>
+                    <h3>Learning Roadmap</h3>
+                    <p>Generates structured week-by-week curricula with exercises, milestones, and projects.</p>
+                    <span class="feature-action">Build Roadmap <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- 2. ASK AI SECTION -->
+        <!-- ============================================================ -->
+        <section id="tab-ask" class="tab-pane">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-comment-dots text-indigo"></i> Ask AI Educational Tutor</h2>
+                <p>Ask anything you want to learn about science, math, coding, history, or literature.</p>
+            </div>
+
+            <div class="card form-card">
+                <form id="askForm" onsubmit="handleAskSubmit(event)">
+                    <div class="form-group">
+                        <label for="askQuestion">Your Question</label>
+                        <div class="textarea-wrapper">
+                            <textarea id="askQuestion" rows="4" class="form-control" placeholder="e.g. How does photosynthesis convert sunlight into energy? Explain step by step." required></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Suggestion Chips -->
+                    <div class="chips-container">
+                        <span class="chip-label">Quick Suggestions:</span>
+                        <button type="button" class="chip" onclick="fillQuestion('What is photosynthesis and why is it vital for Earth?')">🌱 Photosynthesis</button>
+                        <button type="button" class="chip" onclick="fillQuestion('Explain recursion in computer programming with a real-life analogy.')">💻 Recursion Analogy</button>
+                        <button type="button" class="chip" onclick="fillQuestion('How do neural networks learn through backpropagation?')">🧠 Neural Networks</button>
+                        <button type="button" class="chip" onclick="fillQuestion('Why does gravity cause time dilation in general relativity?')">⏳ Time Dilation</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="clearAskForm()"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                        <button type="submit" id="askSubmitBtn" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Ask EduGenie</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Result Box -->
+            <div id="askResultCard" class="card result-card" style="display: none;">
+                <div class="result-header">
+                    <div class="result-title"><i class="fa-solid fa-robot"></i> EduGenie Answer</div>
+                    <button class="btn btn-sm btn-ghost" onclick="copyResult('askAnswerContent')"><i class="fa-solid fa-copy"></i> Copy</button>
+                </div>
+                <div id="askAnswerContent" class="markdown-body"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- 3. EXPLAIN CONCEPT SECTION -->
+        <!-- ============================================================ -->
+        <section id="tab-explain" class="tab-pane">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-lightbulb text-emerald"></i> Concept Explainer</h2>
+                <p>Deconstruct complex topics into clear, intuitive explanations adapted to your learning level.</p>
+            </div>
+
+            <div class="card form-card">
+                <form id="explainForm" onsubmit="handleExplainSubmit(event)">
+                    <div class="form-row">
+                        <div class="form-group flex-2">
+                            <label for="explainTopic">Concept or Topic Name</label>
+                            <input type="text" id="explainTopic" class="form-control" placeholder="e.g. Quantum Computing, Black Holes, Blockchain, Docker" required>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="explainLevel">Learning Level</label>
+                            <select id="explainLevel" class="form-control">
+                                <option value="beginner" selected>🐣 Beginner (Simple & Metaphorical)</option>
+                                <option value="intermediate">🚀 Intermediate (Mechanisms & Terms)</option>
+                                <option value="advanced">🔬 Advanced (Technical & Mathematical)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Sample Topics -->
+                    <div class="chips-container">
+                        <span class="chip-label">Popular Topics:</span>
+                        <button type="button" class="chip" onclick="fillExplain('Blockchain Technology', 'beginner')">🔗 Blockchain</button>
+                        <button type="button" class="chip" onclick="fillExplain('Quantum Entanglement', 'intermediate')">⚛️ Quantum Physics</button>
+                        <button type="button" class="chip" onclick="fillExplain('Docker Containers & Virtualization', 'beginner')">🐳 Docker</button>
+                        <button type="button" class="chip" onclick="fillExplain('Transformer Self-Attention Mechanism', 'advanced')">🤖 Self-Attention</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="clearExplainForm()"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                        <button type="submit" id="explainSubmitBtn" class="btn btn-emerald"><i class="fa-solid fa-wand-magic-sparkles"></i> Explain Concept</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Structured Result Cards -->
+            <div id="explainResultCard" class="card result-card" style="display: none;">
+                <div class="result-header">
+                    <div class="result-title">
+                        <span id="explainResultTopic" class="text-emerald">Topic</span>
+                        <span id="explainEngineBadge" class="badge">Engine</span>
+                    </div>
+                    <button class="btn btn-sm btn-ghost" onclick="copyResult('explainFullText')"><i class="fa-solid fa-copy"></i> Copy</button>
+                </div>
+
+                <div class="explanation-sections">
+                    <div class="info-block definition-block">
+                        <h4><i class="fa-solid fa-bookmark"></i> Core Definition</h4>
+                        <p id="explainDefinitionText"></p>
+                    </div>
+
+                    <div class="info-block detailed-block">
+                        <h4><i class="fa-solid fa-book-open-reader"></i> Step-by-Step Breakdown</h4>
+                        <div id="explainDetailedText" class="markdown-body"></div>
+                    </div>
+
+                    <div class="info-block example-block">
+                        <h4><i class="fa-solid fa-lightbulb"></i> Real-World Analogy & Example</h4>
+                        <p id="explainExampleText"></p>
+                    </div>
+
+                    <div class="info-block takeaways-block">
+                        <h4><i class="fa-solid fa-circle-check"></i> Key Takeaways</h4>
+                        <ul id="explainTakeawaysList"></ul>
+                    </div>
+                </div>
+                <div id="explainFullText" style="display:none;"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- 4. SUMMARIZER SECTION -->
+        <!-- ============================================================ -->
+        <section id="tab-summarize" class="tab-pane">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-file-contract text-violet"></i> Study Material Summarizer</h2>
+                <p>Paste long educational passages, research articles, or lecture notes to extract high-yield summaries.</p>
+            </div>
+
+            <div class="card form-card">
+                <form id="summarizeForm" onsubmit="handleSummarizeSubmit(event)">
+                    <div class="form-group">
+                        <div class="label-with-counter">
+                            <label for="summarizeText">Study Material / Text Passage</label>
+                            <span id="summarizeCharCount" class="text-muted text-sm">0 words</span>
+                        </div>
+                        <textarea id="summarizeText" rows="7" class="form-control" placeholder="Paste your study material, book chapter, or article here (minimum 20 characters)..." oninput="updateWordCounter()" required></textarea>
+                    </div>
+
+                    <div class="chips-container">
+                        <span class="chip-label">Sample Passage:</span>
+                        <button type="button" class="chip" onclick="fillSampleStudyPassage()">📖 Load Sample Science Text</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="clearSummarizeForm()"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                        <button type="submit" id="summarizeSubmitBtn" class="btn btn-violet"><i class="fa-solid fa-compress"></i> Summarize Material</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Summarizer Result Card -->
+            <div id="summarizeResultCard" class="card result-card" style="display: none;">
+                <div class="result-header">
+                    <div class="result-title"><i class="fa-solid fa-file-lines text-violet"></i> <span id="summaryHeadline">Summary</span></div>
+                    <button class="btn btn-sm btn-ghost" onclick="copyResult('summaryBodyText')"><i class="fa-solid fa-copy"></i> Copy</button>
+                </div>
+
+                <!-- Stats Bar -->
+                <div id="summaryStatsBar" class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-value" id="statOrigWords">0</span>
+                        <span class="stat-label">Original Words</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="statSummaryWords">0</span>
+                        <span class="stat-label">Summary Words</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value text-emerald" id="statReduction">0%</span>
+                        <span class="stat-label">Condensed By</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value text-indigo" id="statTimeSaved">0 mins</span>
+                        <span class="stat-label">Time Saved</span>
+                    </div>
+                </div>
+
+                <div class="summary-content">
+                    <h4>Executive Summary</h4>
+                    <div id="summaryBodyText" class="markdown-body"></div>
+
+                    <h4 class="mt-4"><i class="fa-solid fa-list-check"></i> High-Yield Key Points</h4>
+                    <ul id="summaryKeyPointsList" class="key-points-list"></ul>
+
+                    <div id="summaryKeyTermsContainer" style="display:none;" class="mt-4">
+                        <h4><i class="fa-solid fa-spell-check"></i> Key Terminology</h4>
+                        <div id="summaryKeyTermsList" class="terms-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- 5. QUIZ GENERATOR SECTION -->
+        <!-- ============================================================ -->
+        <section id="tab-quiz" class="tab-pane">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-circle-question text-amber"></i> Interactive Quiz Generator</h2>
+                <p>Test your knowledge with multiple-choice tests generated on any subject or study text.</p>
+            </div>
+
+            <div class="card form-card" id="quizConfigCard">
+                <form id="quizForm" onsubmit="handleQuizSubmit(event)">
+                    <div class="form-row">
+                        <div class="form-group flex-2">
+                            <label for="quizTopic">Quiz Topic</label>
+                            <input type="text" id="quizTopic" class="form-control" placeholder="e.g. World War II, Calculus Derivatives, Human Anatomy" required>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="quizCount">Questions</label>
+                            <select id="quizCount" class="form-control">
+                                <option value="3">3 Questions (Quick Test)</option>
+                                <option value="5" selected>5 Questions (Standard)</option>
+                                <option value="10">10 Questions (Deep Assessment)</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="quizDifficulty">Difficulty</label>
+                            <select id="quizDifficulty" class="form-control">
+                                <option value="easy">🐣 Easy</option>
+                                <option value="medium" selected>🚀 Medium</option>
+                                <option value="hard">🔥 Hard</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quizSourceText">Optional Source Passage (Quiz will be based on this text)</label>
+                        <textarea id="quizSourceText" rows="3" class="form-control" placeholder="Leave empty for general topic knowledge, or paste text to quiz directly on study material..."></textarea>
+                    </div>
+
+                    <div class="chips-container">
+                        <span class="chip-label">Try Quiz Topics:</span>
+                        <button type="button" class="chip" onclick="fillQuiz('Solar System Astronomy', 'easy')">🪐 Solar System</button>
+                        <button type="button" class="chip" onclick="fillQuiz('Python Object-Oriented Programming', 'medium')">🐍 Python OOP</button>
+                        <button type="button" class="chip" onclick="fillQuiz('Human Circulatory System', 'medium')">🫀 Circulatory System</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="quizSubmitBtn" class="btn btn-amber"><i class="fa-solid fa-play"></i> Generate Quiz</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Quiz Interactive Playing Area -->
+            <div id="quizPlayerCard" class="card result-card" style="display: none;">
+                <div class="quiz-player-header">
+                    <div>
+                        <h3 id="quizDisplayTopic" class="quiz-title">Quiz: Topic</h3>
+                        <span id="quizDisplayMeta" class="badge badge-amber">Medium • 5 Questions</span>
+                    </div>
+                    <button class="btn btn-sm btn-ghost" onclick="resetQuiz()"><i class="fa-solid fa-rotate-left"></i> New Quiz</button>
+                </div>
+
+                <!-- Questions Container -->
+                <div id="quizQuestionsContainer" class="quiz-questions-list"></div>
+
+                <!-- Quiz Submit / Score Bar -->
+                <div class="quiz-action-bar">
+                    <button type="button" id="submitQuizAnswersBtn" class="btn btn-primary btn-lg" onclick="gradeQuiz()">
+                        <i class="fa-solid fa-check-double"></i> Submit Answers & View Score
+                    </button>
+                </div>
+
+                <!-- Quiz Results & Score Summary -->
+                <div id="quizScoreReport" class="quiz-score-report" style="display: none;">
+                    <div class="score-card">
+                        <div class="score-circle">
+                            <span id="scorePercentValue">0%</span>
+                        </div>
+                        <div class="score-details">
+                            <h3 id="scoreVerdict">Quiz Completed!</h3>
+                            <p id="scoreDetailsText">You got 0 out of 0 questions correct.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- 6. LEARNING PATH SECTION -->
+        <!-- ============================================================ -->
+        <section id="tab-path" class="tab-pane">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-route text-rose"></i> Personalized Learning Path</h2>
+                <p>Generate a structured, week-by-week curriculum tailored to your starting level and time commitment.</p>
+            </div>
+
+            <div class="card form-card">
+                <form id="pathForm" onsubmit="handlePathSubmit(event)">
+                    <div class="form-row">
+                        <div class="form-group flex-2">
+                            <label for="pathTopic">Subject or Skill to Master</label>
+                            <input type="text" id="pathTopic" class="form-control" placeholder="e.g. Python for Data Science, Modern Web Development, UI/UX Design" required>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="pathLevel">Starting Level</label>
+                            <select id="pathLevel" class="form-control">
+                                <option value="beginner" selected>Beginner (Zero Experience)</option>
+                                <option value="intermediate">Intermediate (Some Basics)</option>
+                                <option value="advanced">Advanced (Deep Dive)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="pathDuration">Target Duration</label>
+                            <select id="pathDuration" class="form-control">
+                                <option value="2 weeks">2 Weeks (Fast Track)</option>
+                                <option value="4 weeks" selected>4 Weeks (1 Month Standard)</option>
+                                <option value="8 weeks">8 Weeks (2 Months Comprehensive)</option>
+                                <option value="12 weeks">12 Weeks (3 Months Bootcamp)</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="pathHours">Study Commitment (Hours / Week)</label>
+                            <input type="number" id="pathHours" class="form-control" min="1" max="40" value="5" required>
+                        </div>
+                    </div>
+
+                    <div class="chips-container">
+                        <span class="chip-label">Popular Roadmaps:</span>
+                        <button type="button" class="chip" onclick="fillPath('Python Programming from Scratch', 'beginner', '4 weeks', 5)">🐍 Python Basics</button>
+                        <button type="button" class="chip" onclick="fillPath('Full Stack Web Development (HTML, CSS, JS, FastAPI)', 'beginner', '8 weeks', 10)">🌐 Full Stack Dev</button>
+                        <button type="button" class="chip" onclick="fillPath('Machine Learning & Neural Networks', 'intermediate', '8 weeks', 8)">🤖 Machine Learning</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="clearPathForm()"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                        <button type="submit" id="pathSubmitBtn" class="btn btn-rose"><i class="fa-solid fa-compass"></i> Generate Learning Path</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Learning Path Result Card -->
+            <div id="pathResultCard" class="card result-card" style="display: none;">
+                <div class="result-header">
+                    <div>
+                        <h3 id="pathTitle" class="text-rose">Curriculum Title</h3>
+                        <p id="pathOverview" class="text-muted mt-1"></p>
+                    </div>
+                    <button class="btn btn-sm btn-ghost" onclick="copyResult('pathWeeklyTimeline')"><i class="fa-solid fa-copy"></i> Copy</button>
+                </div>
+
+                <!-- Prerequisites -->
+                <div class="path-prereqs-box">
+                    <strong><i class="fa-solid fa-key"></i> Recommended Prerequisites:</strong>
+                    <ul id="pathPrereqsList" class="prereqs-list"></ul>
+                </div>
+
+                <!-- Weekly Timeline -->
+                <div id="pathWeeklyTimeline" class="weekly-timeline"></div>
+
+                <!-- Capstone Project Card -->
+                <div id="pathCapstoneBox" class="capstone-box mt-4">
+                    <div class="capstone-badge"><i class="fa-solid fa-trophy"></i> Capstone Project</div>
+                    <h4 id="capstoneTitle">Project Title</h4>
+                    <p id="capstoneDesc"></p>
+                </div>
+
+                <!-- Resources -->
+                <div id="pathResourcesBox" class="resources-box mt-4">
+                    <h4><i class="fa-solid fa-link"></i> Recommended Learning Resources</h4>
+                    <ul id="pathResourcesList"></ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <div class="logo-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div>
+                    <strong>EduGenie</strong>
+                    <p class="text-muted text-sm">Empowering learners worldwide through intelligent generative AI.</p>
+                </div>
+            </div>
+            <div class="footer-links">
+                <span>FastAPI • Google Gemini • HuggingFace Transformers</span>
+                <span class="text-muted">|</span>
+                <a href="/docs" target="_blank">Swagger Docs</a>
+                <span class="text-muted">|</span>
+                <a href="/redoc" target="_blank">ReDoc</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Custom Script -->
+    <script src="/static/script.js"></script>
+</body>
+</html>
