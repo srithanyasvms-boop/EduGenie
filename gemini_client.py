@@ -1,7 +1,7 @@
 """
 Gemini Client module for EduGenie.
 Provides a unified, resilient interface to interact with Google Gemini models.
-Uses the official Google GenAI SDK with graceful fallbacks.
+Uses the official Google GenAI SDK (Interactions API / models API) with model fallbacks.
 """
 
 import json
@@ -12,12 +12,20 @@ from config import settings
 
 logger = logging.getLogger("edugenie.gemini")
 
+# Fallback models in priority order
+CANDIDATE_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash"
+]
+
 class GeminiClient:
     """Client wrapper for interacting with the Google Gemini API."""
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL
+        self.model_name = settings.GEMINI_MODEL or "gemini-3.8-flash"
         self._client = None
         self._legacy_model = None
         self._sdk_type = None
@@ -65,15 +73,7 @@ class GeminiClient:
         temperature: float = 0.7
     ) -> str:
         """
-        Generates text using Google Gemini.
-
-        Args:
-            prompt: The user prompt or instruction.
-            system_instruction: Optional system instruction for personality and constraints.
-            temperature: Creativity control parameter (0.0 - 1.0).
-
-        Returns:
-            The generated text response.
+        Generates text using Google Gemini with automatic model fallback.
         """
         if not settings.is_gemini_configured:
             raise RuntimeError(
@@ -91,55 +91,75 @@ class GeminiClient:
         if system_instruction:
             full_prompt = f"System Instructions: {system_instruction}\n\nTask:\n{prompt}"
 
-        try:
-            # 1. Modern SDK
-            if self._sdk_type == "google-genai" and self._client:
-                if hasattr(self._client, "models") and hasattr(self._client.models, "generate_content"):
-                    config_kwargs = {}
-                    if system_instruction:
-                        config_kwargs["system_instruction"] = system_instruction
-                    if temperature is not None:
-                        config_kwargs["temperature"] = temperature
-                        
-                    response = self._client.models.generate_content(
-                        model=self.model_name,
-                        contents=prompt,
-                        config=config_kwargs if config_kwargs else None
+        # Determine model candidate list starting with preferred model
+        models_to_try = [self.model_name] + [m for m in CANDIDATE_MODELS if m != self.model_name]
+
+        last_error = None
+        for current_model in models_to_try:
+            try:
+                # 1. Try modern SDK Interactions API first (recommended)
+                if self._sdk_type == "google-genai" and self._client:
+                    if hasattr(self._client, "interactions") and hasattr(self._client.interactions, "create"):
+                        try:
+                            interaction = self._client.interactions.create(
+                                model=current_model,
+                                input=full_prompt
+                            )
+                            if hasattr(interaction, "output_text") and interaction.output_text:
+                                self.model_name = current_model
+                                return interaction.output_text.strip()
+                        except Exception as inter_err:
+                            logger.debug("Interactions API trial with %s failed: %s", current_model, inter_err)
+
+                    # Try models.generate_content
+                    if hasattr(self._client, "models") and hasattr(self._client.models, "generate_content"):
+                        config_kwargs = {}
+                        if system_instruction:
+                            config_kwargs["system_instruction"] = system_instruction
+                        if temperature is not None:
+                            config_kwargs["temperature"] = temperature
+
+                        response = self._client.models.generate_content(
+                            model=current_model,
+                            contents=prompt,
+                            config=config_kwargs if config_kwargs else None
+                        )
+                        if hasattr(response, "text") and response.text:
+                            self.model_name = current_model
+                            return response.text.strip()
+                        elif hasattr(response, "output_text") and response.output_text:
+                            self.model_name = current_model
+                            return response.output_text.strip()
+
+                # 2. Try legacy SDK
+                if self._legacy_model:
+                    generation_config = {"temperature": temperature}
+                    response = self._legacy_model.generate_content(
+                        full_prompt,
+                        generation_config=generation_config
                     )
-                    if hasattr(response, "text") and response.text:
+                    if response and hasattr(response, "text"):
                         return response.text.strip()
-                    elif hasattr(response, "output_text") and response.output_text:
-                        return response.output_text.strip()
 
-                if hasattr(self._client, "interactions") and hasattr(self._client.interactions, "create"):
-                    interaction = self._client.interactions.create(
-                        model=self.model_name,
-                        input=full_prompt
-                    )
-                    if hasattr(interaction, "output_text") and interaction.output_text:
-                        return interaction.output_text.strip()
+            except Exception as e:
+                err_str = str(e).lower()
+                last_error = e
+                # If 404 / model not available, try next candidate model
+                if "404" in err_str or "not_found" in err_str or "not supported" in err_str or "no longer available" in err_str:
+                    logger.warning("Model %s returned 404, falling back to next candidate...", current_model)
+                    continue
+                # For auth or quota errors, re-raise directly
+                elif "api_key" in err_str or "unauthenticated" in err_str or "401" in err_str:
+                    raise RuntimeError("Invalid or expired Gemini API key. Please check your GEMINI_API_KEY in .env.")
+                elif "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str:
+                    raise RuntimeError("Gemini API rate limit or quota exceeded. Please try again in a moment.")
+                else:
+                    logger.warning("Error with %s: %s", current_model, e)
+                    continue
 
-            # 2. Legacy SDK
-            if self._legacy_model:
-                generation_config = {"temperature": temperature}
-                response = self._legacy_model.generate_content(
-                    full_prompt,
-                    generation_config=generation_config
-                )
-                if response and hasattr(response, "text"):
-                    return response.text.strip()
-
-            raise RuntimeError("Received empty or incompatible response from Gemini API.")
-
-        except Exception as e:
-            logger.error("Gemini API generation error: %s", e, exc_info=True)
-            error_str = str(e).lower()
-            if "api_key" in error_str or "unauthenticated" in error_str or "401" in error_str:
-                raise RuntimeError("Invalid or expired Gemini API key. Please check your GEMINI_API_KEY in .env.")
-            elif "quota" in error_str or "429" in error_str or "resource_exhausted" in error_str:
-                raise RuntimeError("Gemini API rate limit or quota exceeded. Please try again in a moment.")
-            else:
-                raise RuntimeError(f"Gemini API request failed: {str(e)}")
+        # If all candidates failed
+        logger.error("All Gemini candidate models failed. Last error: %s", last_error)
+        raise RuntimeError(f"Gemini API request failed: {str(last_error)}")
 
     def generate_json(
         self,

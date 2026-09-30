@@ -38,12 +38,12 @@ class Settings:
         or ""
     ).strip()
     
-    # Gemini Model configuration (configurable via .env)
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+    # Gemini Model configuration (default to modern gemini-3.8-flash)
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
     
     # Local Model Settings (LaMini-Flan-T5-783M)
     LOCAL_MODEL_NAME: str = os.getenv("LOCAL_MODEL_NAME", "MBZUAI/LaMini-Flan-T5-783M").strip()
-    USE_LOCAL_MODEL: bool = os.getenv("USE_LOCAL_MODEL", "True").lower() in ("true", "1", "t")
+    USE_LOCAL_MODEL: bool = os.getenv("USE_LOCAL_MODEL", "False").lower() in ("true", "1", "t")
     LOCAL_MODEL_CACHE_DIR: str = os.getenv(
         "LOCAL_MODEL_CACHE_DIR", 
         str(BASE_DIR / "models" / "cache")
