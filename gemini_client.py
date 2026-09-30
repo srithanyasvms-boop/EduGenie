@@ -1,7 +1,8 @@
 """
 Gemini Client module for EduGenie.
 Provides a unified, resilient interface to interact with Google Gemini models.
-Uses the official Google GenAI SDK (Interactions API / models API) with model fallbacks.
+Uses the current official Google GenAI SDK (google-genai) with support for
+gemini-3.5-flash-lite and automatic candidate model fallback.
 """
 
 import json
@@ -12,20 +13,21 @@ from config import settings
 
 logger = logging.getLogger("edugenie.gemini")
 
-# Fallback models in priority order
+# Current officially supported Gemini models in prioritized fallback order
 CANDIDATE_MODELS = [
-    "gemini-3.8-flash",
-    "gemini-flash-latest",
     "gemini-3.5-flash-lite",
-    "gemini-2.5-flash"
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-flash-latest"
 ]
+
 
 class GeminiClient:
     """Client wrapper for interacting with the Google Gemini API."""
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model_name = settings.GEMINI_MODEL or "gemini-3.8-flash"
+        self.model_name = settings.GEMINI_MODEL or "gemini-3.5-flash-lite"
         self._client = None
         self._legacy_model = None
         self._sdk_type = None
@@ -37,7 +39,7 @@ class GeminiClient:
             logger.warning("Gemini API key is not configured. AI calls requiring Gemini will return a fallback message.")
             return
 
-        # Attempt 1: Modern google-genai SDK
+        # Attempt 1: Modern google-genai SDK (Official)
         try:
             from google import genai
             self._client = genai.Client(api_key=self.api_key)
@@ -73,11 +75,11 @@ class GeminiClient:
         temperature: float = 0.7
     ) -> str:
         """
-        Generates text using Google Gemini with automatic model fallback.
+        Generates text using Google Gemini with automatic model failover across supported models.
         """
         if not settings.is_gemini_configured:
             raise RuntimeError(
-                "Gemini API key is not configured. Please add GEMINI_API_KEY to your .env file."
+                "Gemini API key is not configured. Please add GEMINI_API_KEY to your .env file or Vercel Environment Variables."
             )
 
         if not self.is_configured():
@@ -91,27 +93,15 @@ class GeminiClient:
         if system_instruction:
             full_prompt = f"System Instructions: {system_instruction}\n\nTask:\n{prompt}"
 
-        # Determine model candidate list starting with preferred model
+        # Determine prioritized model list starting with configured model
         models_to_try = [self.model_name] + [m for m in CANDIDATE_MODELS if m != self.model_name]
 
         last_error = None
         for current_model in models_to_try:
             try:
-                # 1. Try modern SDK Interactions API first (recommended)
+                # 1. Try modern google-genai SDK
                 if self._sdk_type == "google-genai" and self._client:
-                    if hasattr(self._client, "interactions") and hasattr(self._client.interactions, "create"):
-                        try:
-                            interaction = self._client.interactions.create(
-                                model=current_model,
-                                input=full_prompt
-                            )
-                            if hasattr(interaction, "output_text") and interaction.output_text:
-                                self.model_name = current_model
-                                return interaction.output_text.strip()
-                        except Exception as inter_err:
-                            logger.debug("Interactions API trial with %s failed: %s", current_model, inter_err)
-
-                    # Try models.generate_content
+                    # models.generate_content
                     if hasattr(self._client, "models") and hasattr(self._client.models, "generate_content"):
                         config_kwargs = {}
                         if system_instruction:
@@ -131,6 +121,19 @@ class GeminiClient:
                             self.model_name = current_model
                             return response.output_text.strip()
 
+                    # Interactions API
+                    if hasattr(self._client, "interactions") and hasattr(self._client.interactions, "create"):
+                        try:
+                            interaction = self._client.interactions.create(
+                                model=current_model,
+                                input=full_prompt
+                            )
+                            if hasattr(interaction, "output_text") and interaction.output_text:
+                                self.model_name = current_model
+                                return interaction.output_text.strip()
+                        except Exception as inter_err:
+                            logger.debug("Interactions API call with %s: %s", current_model, inter_err)
+
                 # 2. Try legacy SDK
                 if self._legacy_model:
                     generation_config = {"temperature": temperature}
@@ -144,20 +147,18 @@ class GeminiClient:
             except Exception as e:
                 err_str = str(e).lower()
                 last_error = e
-                # If 404 / model not available, try next candidate model
-                if "404" in err_str or "not_found" in err_str or "not supported" in err_str or "no longer available" in err_str:
-                    logger.warning("Model %s returned 404, falling back to next candidate...", current_model)
+                # Check for bad API key immediately
+                if "api_key" in err_str or "unauthenticated" in err_str or "401" in err_str:
+                    raise RuntimeError("Invalid or expired Gemini API key. Please check GEMINI_API_KEY in your .env or Vercel Environment Variables.")
+                
+                # For 404 (not found), 429 (rate limited / quota exhausted), or 503 (service unavailable), failover to next model
+                if "404" in err_str or "not_found" in err_str or "429" in err_str or "quota" in err_str or "resource_exhausted" in err_str or "503" in err_str or "unavailable" in err_str:
+                    logger.warning("Model %s had issue (%s). Failing over to next supported model...", current_model, e)
                     continue
-                # For auth or quota errors, re-raise directly
-                elif "api_key" in err_str or "unauthenticated" in err_str or "401" in err_str:
-                    raise RuntimeError("Invalid or expired Gemini API key. Please check your GEMINI_API_KEY in .env.")
-                elif "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str:
-                    raise RuntimeError("Gemini API rate limit or quota exceeded. Please try again in a moment.")
                 else:
                     logger.warning("Error with %s: %s", current_model, e)
                     continue
 
-        # If all candidates failed
         logger.error("All Gemini candidate models failed. Last error: %s", last_error)
         raise RuntimeError(f"Gemini API request failed: {str(last_error)}")
 

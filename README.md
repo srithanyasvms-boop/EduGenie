@@ -103,7 +103,7 @@ copy .env.example .env
 Edit `.env` and insert your Gemini API Key from [Google AI Studio](https://aistudio.google.com/):
 ```env
 GEMINI_API_KEY=AIzaSy...your_real_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.8-flash
 HOST=127.0.0.1
 PORT=8000
 DEBUG=True

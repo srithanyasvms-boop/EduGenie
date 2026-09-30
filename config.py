@@ -38,8 +38,8 @@ class Settings:
         or ""
     ).strip()
     
-    # Gemini Model configuration (default to modern gemini-3.8-flash)
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip()
+    # Gemini Model configuration (default to high-throughput gemini-3.5-flash-lite)
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
     
     # Local Model Settings (LaMini-Flan-T5-783M)
     LOCAL_MODEL_NAME: str = os.getenv("LOCAL_MODEL_NAME", "MBZUAI/LaMini-Flan-T5-783M").strip()
